@@ -6,6 +6,7 @@ import getShouts from "./utils/getShouts.mjs";
 import express from "express";
 import cors from "cors";
 import path from "path";
+import getCredentials from "./utils/getCredentials.mjs";
 
 /** @todo Replace with import.meta eventually */
 const FILENAME =
@@ -46,6 +47,10 @@ const getCredentialsFromHeader = headers => {
   }
 };
 
+app.get("/", function(req, res) {
+  res.sendFile(path.join(DIRNAME + "/index.html")); // send from static files
+});
+
 app.get("/getshouts", async (req, res) => {
   try {
     const { username, password } = getCredentialsFromHeader(req.headers);
@@ -65,16 +70,32 @@ app.get("/getshouts", async (req, res) => {
 
     const jsonxml = await xmlConvert(output);
     if (!jsonxml) throw Error("Malformed data received");
-    res.send(jsonxml);
-    res.status(200).end();
+    res
+      .json(jsonxml)
+      .status(200)
+      .end();
   } catch (err) {
-    res.send(err.message || err);
-    res.status(500).end();
+    res
+      .send(err.message || err)
+      .status(500)
+      .end();
   }
 });
 
-app.get("/", function(req, res) {
-  res.sendFile(path.join(DIRNAME + "/index.html")); // send from static files
+app.post("/getcredentials", async function(req, res) {
+  try {
+    const { q_username, q_password } = req.body;
+    const result = await getCredentials(q_username, q_password);
+    res
+      .json(result)
+      .status(200)
+      .end();
+  } catch (err) {
+    res
+      .send(err.message || err)
+      .status(500)
+      .end();
+  }
 });
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
