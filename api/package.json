@@ -10,6 +10,7 @@
     "cors": "^2.8.5",
     "express": "^4.16.4",
     "puppeteer": "^5.3.1",
+    "ws": "^7.3.1",
     "xml2js": "^0.4.19"
   },
   "devDependencies": {

@@ -2,8 +2,21 @@ import React, { useState, useEffect, Fragment } from "react";
 import axios from "axios";
 import { useCallback } from "react";
 import "./../Styles/Shouts.css";
+import LoadSpinner from "./LoadSpinner";
+import ErrorBox from "./ErrorBox";
+
+const SIDELINIEN_ID = "sidlin_id";
+const SIDELINIEN_PWD = "sidlin_pwd";
+const saveToDevice = (key, value) => window.localStorage.setItem(key, value);
+const getFromDevice = key => window.localStorage.getItem(key);
+const deleteFromDevice = key => window.localStorage.removeItem(key);
+const sleep = async ms => await new Promise(r => setTimeout(r, ms));
 
 export default function Login(props) {
+  const [bb_userid, set_bb_userid] = useState(getFromDevice(SIDELINIEN_ID));
+  const [bb_password, set_bb_password] = useState(
+    getFromDevice(SIDELINIEN_PWD)
+  );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -12,12 +25,16 @@ export default function Login(props) {
   const [shouts, setShouts] = useState([]);
   const [sticky, setSticky] = useState([]);
   const [message, setMessage] = useState("");
+  const [showError, setShowError] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const doLogin = async () => {
     if (username && password) {
+      setIsLoggingIn(true);
+      await grabCredentials();
       await grabShouts();
-      setLoggedIn(true);
+      setIsLoggingIn(false);
     }
   };
 
@@ -26,15 +43,19 @@ export default function Login(props) {
 
     if (window.confirm("Vil du gerne logge ud?")) {
       setLoggedIn(false);
-      setPassword("");
       setUsername("");
+      setPassword("");
+      set_bb_password("");
+      set_bb_userid("");
       setShouts([]);
       setSticky([]);
       setLastUpdate(null);
+      setShowError("");
+
+      deleteFromDevice(SIDELINIEN_ID);
+      deleteFromDevice(SIDELINIEN_PWD);
     }
   };
-
-  const sleep = async ms => await new Promise(r => setTimeout(r, ms));
 
   const doSend = async () => {
     setIsSending(true);
@@ -47,24 +68,86 @@ export default function Login(props) {
     setIsSending(false);
   };
 
-  const grabShouts = useCallback(async () => {
+  const grabCredentials = async () => {
     const res = await axios({
-      url: "http://localhost:4000/getshouts",
-      headers: {
-        Authorization: "Basic " + window.btoa(username + ":" + password)
+      method: "post",
+      url: "http://localhost:4000/getcredentials",
+      data: {
+        username: username,
+        password: password
       }
     });
 
-    console.log(res.data);
+    const { bb_userid: id, bb_password: pwd } = res.data;
 
+    if (id && pwd) {
+      set_bb_userid(id);
+      set_bb_password(pwd);
+      setLoggedIn(true);
+      setShowError("");
+
+      saveToDevice(SIDELINIEN_ID, id);
+      saveToDevice(SIDELINIEN_PWD, pwd);
+    } else {
+      setShowError("Vi kunne ikke logge dig ind.");
+    }
+  };
+
+  const grabShouts = useCallback(async () => {
+    if (!loggedIn) {
+      console.log("not logged in");
+      clearTimeout(grabShouts);
+      return;
+    }
+
+    const res = await axios({
+      url: "http://localhost:4000/getshouts",
+      headers: {
+        Authorization: "Basic " + window.btoa(bb_userid + ":" + bb_password)
+      }
+    });
+
+    if (res.data.vbshout.error) {
+      console.log(res.data.vbshout.error);
+      return;
+    }
+
+    if (!loggedIn) setLoggedIn(true);
     setShouts(res.data.vbshout.shouts[0].shout);
     setSticky(res.data.vbshout.sticky[0]);
     setLastUpdate(Date.now());
-  }, [password, username]);
+
+    setTimeout(grabShouts, 6000);
+  }, [bb_userid, bb_password, loggedIn]);
+
+  const grabAutologin = useCallback(async () => {
+    const id = await getFromDevice(SIDELINIEN_ID);
+    const pwd = await getFromDevice(SIDELINIEN_PWD);
+
+    // try to login
+    if (id && pwd) {
+      set_bb_userid(id);
+      set_bb_password(pwd);
+      setIsLoggingIn(true);
+      try {
+        setLoggedIn(true);
+        await grabShouts();
+      } catch (e) {
+        setLoggedIn(false);
+        deleteFromDevice(SIDELINIEN_ID);
+        deleteFromDevice(SIDELINIEN_PWD);
+      }
+      setIsLoggingIn(false);
+    }
+  }, [grabShouts]);
 
   useEffect(() => {
-    if (lastUpdate !== null && loggedIn) setTimeout(grabShouts, 6000);
-  }, [lastUpdate, grabShouts, loggedIn]);
+    grabAutologin();
+  }, [grabAutologin]);
+
+  useEffect(() => {
+    grabShouts();
+  }, [loggedIn, grabShouts]);
 
   const createMarkup = str => {
     return { __html: str };
@@ -93,10 +176,12 @@ export default function Login(props) {
             <div className="updateTime">
               {new Date(lastUpdate).toLocaleTimeString()}
             </div>
-            <button onClick={e => doLogout()}>&times; Log ud</button>
+            <button onClick={e => doLogout()}>&times;</button>
           </div>
 
           <div className="shoutContainer">
+            {shouts.length === 0 && <LoadSpinner />}
+
             {sticky &&
               sticky
                 .filter(x => x !== `""`)
@@ -124,20 +209,30 @@ export default function Login(props) {
                 })
                 .map(shout => (
                   <div
-                    className={`shout ${shout.type === "me" ? " notice" : ""}`}
+                    className={`shout ${
+                      shout.type === "me"
+                        ? " notice"
+                        : shout.userid === bb_userid
+                        ? "self"
+                        : ""
+                    }`}
                     key={shout.id}
                   >
                     {shout.time && <div className="time">{shout.time}</div>}
                     <div
                       className={`message${
-                        shout.userid === username ? " self" : ""
+                        shout.userid === bb_userid ? " self" : ""
                       }`}
                       style={{ borderColor: shout.color }}
                     >
                       <div className="author">{shout.name}</div>
                       <div
                         className="messageContent"
-                        dangerouslySetInnerHTML={createMarkup(shout.message)}
+                        dangerouslySetInnerHTML={createMarkup(
+                          shout.type === "me"
+                            ? shout.name + " " + shout.message
+                            : shout.message
+                        )}
                       />
                     </div>
                   </div>
@@ -181,6 +276,7 @@ export default function Login(props) {
               autoComplete="username"
               onChange={e => setUsername(e.target.value)}
               value={username}
+              disabled={isLoggingIn}
             />
             <input
               className="inputField"
@@ -189,12 +285,17 @@ export default function Login(props) {
               placeholder="Password"
               onChange={e => setPassword(e.target.value)}
               value={password}
+              disabled={isLoggingIn}
             />
             <br />
 
-            <button className="primary" type="submit">
-              Log ind
+            <button className="primary" type="submit" disabled={isLoggingIn}>
+              {isLoggingIn ? "Logger ind..." : "Log ind"}
             </button>
+
+            {isLoggingIn && <LoadSpinner />}
+
+            {showError !== "" && <ErrorBox errorText={showError} />}
           </form>
         </div>
       )}

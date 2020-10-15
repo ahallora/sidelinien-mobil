@@ -1,53 +1,58 @@
 import puppeteer from "puppeteer";
 
+const sleep = async ms => await new Promise(r => setTimeout(r, ms));
+
+const getCookieValue = (arr, cookieName) =>
+  arr.find(x => x.name === cookieName)
+    ? arr.find(x => x.name === cookieName).value
+    : null;
+
 export default async function getCredentials(username, password) {
-  const loginPage = "http://sidelinien.dk/forums/";
+  try {
+    const loginPage =
+      "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
 
-  let error;
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-  await page.goto(loginPage);
+    let error;
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto(loginPage, { waitUntil: "networkidle2" });
+    //await page.setViewport({ width: 1200, height: 720 });
 
-  await page.evaluate(
-    (username, password) => {
-      document.querySelector("#navbar_username").value = username;
-      document.querySelector("#navbar_password").value = password;
-    },
-    { username, password }
-  );
+    await page.type("#vb_login_username", username);
+    await page.type("#vb_login_password", password);
+    await page.click("#cb_cookieuser"); // check this to save id and password hash to cookies so we can get it
 
+    await Promise.all([
+      page.click("form.vbform input[type='submit']"),
+      page.waitForNavigation({ waitUntil: "networkidle0" })
+    ]);
 
-  await Promise.all([
-    page.click("#navbar_loginform .loginbutton"),
-    page.waitForNavigation()
-  ]);
+    // check if the login fails (and try to extract error)
+    if (page.url().indexOf("&do=login") > -1) {
+      error = await page.evaluate(() => {
+        return document.querySelector(".standard_error").innerText;
+      });
+      error =
+        error && error.innerText
+          ? error.innerText
+          : "Generisk fejl - fortæl os det!";
+    }
+    if (error) throw Error(error);
 
-  const finalPage = page.url();
-  console.log("New Page URL:", finalPage);
+    // grab page cookies and extract userid and password
+    const client = await page.target().createCDPSession();
+    const cookies = (await client.send("Network.getAllCookies")).cookies;
 
-  // check if the login fails (and try to extract error)
-  if (finalPage.indexOf("&do=login") > -1) {
-    error = await page.evaluate(() => {
-      return document.querySelector(".standard_error").innerText;
-    });
-    error =
-      error && error.innerText
-        ? error.innerText
-        : "Generisk fejl - fortæl os det!";
+    const data = {
+      bb_sessionhash: getCookieValue(cookies, "bb_sessionhash"),
+      bb_userid: getCookieValue(cookies, "bb_userid"),
+      bb_password: getCookieValue(cookies, "bb_password")
+    };
+
+    await browser.close();
+    return data;
+  } catch (err) {
+    console.error(err);
+    throw err;
   }
-  if (error) throw Error(error);
-
-  // grab page cookies and extract userid and password
-  const cookies = await page.cookies();
-  console.log(cookies);
-
-  await browser.close();
-
-  return {
-    cookies: cookies.map(x => {
-      return { name: x.name, value: x.value };
-    }),
-    username: "naa",
-    password: "na"
-  };
 }

@@ -53,7 +53,9 @@ body {
   font-weight: bold;
   margin: 0;
   padding: 0;
+  padding-left: 8px;
   width: 33%;
+  text-align: left;
 }
 
 .header .updateTime {
@@ -63,13 +65,13 @@ body {
 }
 
 .header button {
-  width: 70px;
+  width: 44px;
   height: 44px;
-  margin-left: calc(33% - 90px);
+  margin-left: calc(33% - 60px);
   margin-top: 4px;
   margin-right: 4px;
   border: 0;
-  font-size: 0.85rem;
+  font-size: 1.5rem;
   background: transparent;
   color: #222;
   border-radius: 4px;
@@ -139,12 +141,12 @@ button.primary:focus {
   margin: 0;
 }
 
-.footer button:disabled {
+button.primary:disabled {
   background: #ddd;
   color: #888;
 }
 
-.footer input:disabled {
+input.inputField:disabled {
   background: #eee;
   color: #888;
 }
@@ -166,10 +168,25 @@ button.primary:focus {
   margin: 0;
   padding: 0;
   margin-bottom: 8px;
-  animation: showShout 1s ease-in-out forwards;
+  animation: showShoutLeft 500ms ease-in-out forwards;
 }
 
-@keyframes showShout {
+.shout.self {
+  animation: showShoutRight 500ms ease-in-out forwards;
+}
+
+@keyframes showShoutRight {
+  0% {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0px);
+    opacity: 1;
+  }
+}
+
+@keyframes showShoutLeft {
   0% {
     transform: translateX(-50px);
     opacity: 0;
@@ -189,7 +206,7 @@ button.primary:focus {
 
 .message {
   text-align: left;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #000;
   background: #e0e0e0;
   padding: 8px 16px;
@@ -208,7 +225,8 @@ button.primary:focus {
   margin-left: 10%;
 }
 
-.shout.notice .time {
+.shout.notice .time,
+.shout.notice .author {
   display: none;
 }
 

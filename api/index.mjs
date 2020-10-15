@@ -1,6 +1,7 @@
 import bodyParser from "body-parser";
 import bodyParserXml from "body-parser-xml";
-import md5 from "./utils/md5.mjs";
+//import md5 from "./utils/md5.mjs";
+import ws from "ws";
 import xmlConvert from "./utils/xmlConvert.mjs";
 import getShouts from "./utils/getShouts.mjs";
 import express from "express";
@@ -21,6 +22,7 @@ const DIRNAME =
 const app = express();
 bodyParserXml(bodyParser);
 app.use(bodyParser.xml());
+app.use(bodyParser.json());
 app.use(express.static(DIRNAME + "/../client/build"));
 app.use(
   cors({
@@ -29,19 +31,17 @@ app.use(
 );
 
 const port = 4000;
-const username = "";
-const password = "";
 
 const getCredentialsFromHeader = headers => {
   try {
-    const [username, password] = new Buffer(
+    const [bb_userid, bb_password] = new Buffer(
       headers["authorization"].split("Basic ")[1],
       "base64"
     )
       .toString("ascii")
       .split(":");
 
-    return { username, password };
+    return { bb_userid, bb_password };
   } catch (e) {
     return false;
   }
@@ -53,10 +53,10 @@ app.get("/", function(req, res) {
 
 app.get("/getshouts", async (req, res) => {
   try {
-    const { username, password } = getCredentialsFromHeader(req.headers);
-    if (!username || !password) throw Error("Invalid credentials");
+    const { bb_userid, bb_password } = getCredentialsFromHeader(req.headers);
+    if (!bb_userid || !bb_password) throw Error("Invalid credentials");
 
-    const output = await getShouts(username, password);
+    const output = await getShouts(bb_userid, bb_password);
     // const etag = md5(output);
 
     // if (etag === req.headers["if-none-match"]) {
@@ -84,8 +84,8 @@ app.get("/getshouts", async (req, res) => {
 
 app.post("/getcredentials", async function(req, res) {
   try {
-    const { q_username, q_password } = req.body;
-    const result = await getCredentials(q_username, q_password);
+    const { username, password } = req.body;
+    const result = await getCredentials(username, password);
     res
       .json(result)
       .status(200)
@@ -99,3 +99,51 @@ app.post("/getcredentials", async function(req, res) {
 });
 
 app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+
+////////////////////////////////////
+
+function noop() {}
+function heartbeat() {
+  this.isAlive = true;
+}
+const wss = new ws.Server({ noServer: true });
+
+wss.on("connection", (socket, req) => {
+  socket.id = req.headers["sec-websocket-key"];
+  socket.isAlive = true;
+  socket.on("pong", heartbeat);
+  socket.on("message", message => console.log(message));
+
+  console.log("new connection", socket.id);
+  console.log("active connections", wss.clients.size);
+});
+
+const interval = setInterval(function ping() {
+  for (let socket of wss.clients) {
+    if (socket.isAlive) {
+      socket.send(
+        JSON.stringify({ status: "active connections: " + wss.clients.size })
+      );
+    }
+    if (socket.isAlive === false) return socket.terminate();
+    socket.isAlive = false;
+    socket.ping(noop);
+  }
+}, 1000);
+
+wss.on("close", function close() {
+  console.log("disconnected");
+  clearInterval(interval);
+  close();
+});
+
+wss.on("listening", socket => {
+  console.log("listening", socket);
+});
+
+const server = app.listen(port + 443);
+server.on("upgrade", (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, socket => {
+    wss.emit("connection", socket, request);
+  });
+});
