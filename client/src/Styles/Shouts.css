@@ -20,7 +20,11 @@ body {
   max-width: 375px;
   margin: 0 auto;
   padding: 16px;
-  margin-top: 33%;
+  margin-top: 25vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .loginContainer h1 {
@@ -241,16 +245,12 @@ input.inputField:disabled {
 .shout.notice .message .messageContent {
   font-size: left;
   font-size: 0.7rem;
-  display: flex;
   align-items: center;
   margin-top: 4px;
   margin-left: 2px;
   opacity: 0.5;
 }
 
-.shout.notice .message .messageContent a {
-  margin-left: 4px;
-}
 
 .message a,
 .message a:hover,

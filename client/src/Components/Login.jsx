@@ -62,6 +62,9 @@ export default function Login(props) {
     console.log("send message", message);
 
     // do stuff here
+    setShowError(
+      "Vi arbejder på også at kunne sende beskeder direkte til skakten."
+    );
     await sleep(2000);
 
     setMessage("");
@@ -239,6 +242,10 @@ export default function Login(props) {
                 ))}
           </div>
 
+          {showError !== "" && (
+            <ErrorBox errorText={showError} cb={setShowError} />
+          )}
+
           <div className="footer">
             <input
               type="text"
@@ -295,7 +302,9 @@ export default function Login(props) {
 
             {isLoggingIn && <LoadSpinner />}
 
-            {showError !== "" && <ErrorBox errorText={showError} />}
+            {showError !== "" && (
+              <ErrorBox errorText={showError} cb={setShowError} />
+            )}
           </form>
         </div>
       )}

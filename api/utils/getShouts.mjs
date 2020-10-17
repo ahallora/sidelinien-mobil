@@ -21,8 +21,6 @@ export default async function getShouts(bb_userid, bb_password) {
     responseEncoding: "binary"
   });
 
-  console.log(res.data);
-
   if (!res.data) throw Error(res);
   let html = res.data.toString("latin1");
   return html;

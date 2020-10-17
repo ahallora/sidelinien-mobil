@@ -1,9 +1,10 @@
 .errorBox {
   padding: 16px 8px;
   margin-top: 16px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  line-height: 135%;
   color: red;
-  background: #ff000026;
+  background: #fdd8d8;
   position: fixed;
   bottom: 16px;
   left: 16px;
@@ -11,6 +12,7 @@
   transform: translateY(0px);
   transition: transform 250ms ease-in-out;
   animation: hideErrorBox 5s ease-in-out forwards;
+  z-index: 10000;
 }
 
 @keyframes hideErrorBox {
