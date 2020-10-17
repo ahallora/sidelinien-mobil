@@ -1,0 +1,169 @@
+service: sidelinien-api
+
+plugins:
+  - serverless-webpack
+  - serverless-offline
+  - serverless-s3-sync
+  - serverless-cloudfront-invalidate
+
+package:
+  exclude:
+    - mocks/**
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  clientBucket: sidelinien-${self:custom.stage}-client
+  #environment: ${file(./../env.yml):${self:custom.stage}, file(./../env.yml):default}
+
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules:
+      packagePath: "./package.json"
+
+  cloudfrontInvalidate:
+    distributionIdKey: DistributionId
+    items:
+      - "/*"
+      - "/index.html"
+
+  s3Sync:
+    - bucketName: ${self:custom.clientBucket}
+      localDir: ./../client/build
+      acl: public-read
+      params:
+        - index.html:
+            CacheControl: "no-cache"
+        - "*.js":
+            CacheControl: "public, max-age=31536000"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: eu-north-1
+  profile: allora
+  individually: true
+
+  environment:
+    STAGE: ${self:custom.stage}
+    REGION: ${self:provider.region}
+
+functions:
+  getShouts:
+    handler: src/endpoints/getShouts.main
+    events:
+      - http:
+          path: /getshouts
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Authorization
+  getCredentials:
+    handler: src/endpoints/getCredentials.main
+    events:
+      - http:
+          path: /getcredentials
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # Credits: https://coletiv.com/blog/how-to-use-aws-cloud-formation-to-setup-the-infrastructure-for-a-static-website/
+    # Create the bucket to contain the website HTML
+    clientBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: ${self:custom.clientBucket}
+        WebsiteConfiguration:
+          ErrorDocument: "index.html"
+          IndexDocument: "index.html"
+
+    # Configure Access to CloudFront
+    CloudFrontOriginAccessIdentity:
+      Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: !Ref clientBucket
+
+    # Configure CloudFront
+    CloudFrontDistribution:
+      Type: "AWS::CloudFront::Distribution"
+      Properties:
+        DistributionConfig:
+          CustomErrorResponses:
+            - ErrorCode: 403 # not found
+              ResponseCode: 404
+              ResponsePagePath: "/index.html"
+          DefaultCacheBehavior:
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            Compress: true
+            DefaultTTL: 3600 # in seconds
+            ForwardedValues:
+              Cookies:
+                Forward: none
+              QueryString: false
+            MaxTTL: 86400 # in seconds
+            MinTTL: 60 # in seconds
+            TargetOriginId: s3origin
+            ViewerProtocolPolicy: "allow-all"
+          # This DefaultRootObject configuration is not enough.
+          DefaultRootObject: "/index.html"
+          Enabled: true
+          HttpVersion: http2
+          PriceClass: "PriceClass_All"
+          Origins:
+            - DomainName: !GetAtt "clientBucket.DomainName"
+              Id: s3origin
+              S3OriginConfig:
+                OriginAccessIdentity:
+                  Fn::Join:
+                    - ""
+                    - - "origin-access-identity/cloudfront/"
+                      - !Ref CloudFrontOriginAccessIdentity
+
+    # Create an IAM user with Access Keys to enable automated deployment of the website to this bucket
+    PublishUser:
+      Type: "AWS::IAM::User"
+      Properties:
+        Policies:
+          - PolicyName: !Sub "publish-to-${self:custom.clientBucket}"
+            PolicyDocument:
+              Statement:
+                - Action: "s3:*"
+                  Effect: Allow
+                  Resource:
+                    - !Sub "arn:aws:s3:::${self:custom.clientBucket}"
+                    - !Sub "arn:aws:s3:::${self:custom.clientBucket}/*"
+
+    PublishCredentials:
+      Type: "AWS::IAM::AccessKey"
+      Properties:
+        UserName: !Ref PublishUser
+
+  Outputs:
+    Bucket:
+      Description: "S3 Bucket Name"
+      Value: !Ref clientBucket
+    BucketUrl:
+      Description: "S3 Bucket Url"
+      Value: !GetAtt "clientBucket.WebsiteURL"
+    AccessKeyId:
+      Description: "S3 Access Key"
+      Value: !Ref PublishCredentials
+    AccessKeySecret:
+      Description: "S3 Secret Key"
+      Value: !GetAtt PublishCredentials.SecretAccessKey
+    DistributionId:
+      Description: "CloudFront Distribution ID"
+      Value: !Ref CloudFrontDistribution
+    Domain:
+      Description: "Cloudfront Domain"
+      Value: !GetAtt CloudFrontDistribution.DomainName

@@ -1,13 +1,13 @@
 import puppeteer from "puppeteer";
 
-const sleep = async ms => await new Promise(r => setTimeout(r, ms));
+const sleep = async (ms: number) => await new Promise(r => setTimeout(r, ms));
 
-const getCookieValue = (arr, cookieName) =>
+const getCookieValue = (arr: any[], cookieName: string) =>
   arr.find(x => x.name === cookieName)
     ? arr.find(x => x.name === cookieName).value
     : null;
 
-export default async function getCredentials(username, password) {
+export default async function getCredentials(username: any, password: any) {
   try {
     const loginPage =
       "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
@@ -30,6 +30,7 @@ export default async function getCredentials(username, password) {
     // check if the login fails (and try to extract error)
     if (page.url().indexOf("&do=login") > -1) {
       error = await page.evaluate(() => {
+        // @ts-ignore
         return document.querySelector(".standard_error").innerText;
       });
       error =

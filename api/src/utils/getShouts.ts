@@ -1,6 +1,9 @@
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 
-export default async function getShouts(bb_userid, bb_password) {
+export default async function getShouts(
+  bb_userid: string,
+  bb_password: string
+): Promise<string> {
   const ts = Date.now();
   const url = `http://sidelinien.dk/forums/vbshout.php?type=shouts&do=ajax&action=fetch&instanceid=1&tabid=shouts&shoutorder=DESC&pmtime=0&v=${ts}`;
   const headers = {
@@ -10,18 +13,15 @@ export default async function getShouts(bb_userid, bb_password) {
     cookie: `bb_userid=${bb_userid}; bb_password=${bb_password}`
   };
 
-  const res = await axios({
-    method: "get",
+  const res = await axios(<AxiosRequestConfig>{
+    method: "GET",
     url,
     headers,
-    referrer: "http://sidelinien.dk/forums/forum.php",
-    body: null,
-    mode: "cors",
     responseType: "arraybuffer",
+    //@ts-ignore
     responseEncoding: "binary"
   });
-
-  if (!res.data) throw Error(res);
+  if (!res.data) throw Error("Data kunne ikke hentes");
   let html = res.data.toString("latin1");
   return html;
 }
