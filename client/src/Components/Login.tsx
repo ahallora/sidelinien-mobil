@@ -1,24 +1,27 @@
-import React, { useState, useEffect, Fragment } from "react";
+import React, { useState, useEffect, Fragment, useRef } from "react";
 import axios from "axios";
 import { useCallback } from "react";
 import "./../Styles/Shouts.css";
 import LoadSpinner from "./LoadSpinner";
 import ErrorBox from "./ErrorBox";
+import config from "./../config";
 
 const SIDELINIEN_ID = "sidlin_id";
 const SIDELINIEN_PWD = "sidlin_pwd";
-const saveToDevice = (key, value) => window.localStorage.setItem(key, value);
-const getFromDevice = key => window.localStorage.getItem(key);
-const deleteFromDevice = key => window.localStorage.removeItem(key);
-const sleep = async ms => await new Promise(r => setTimeout(r, ms));
+const saveToDevice = (key: string, value: string) =>
+  window.localStorage.setItem(key, value);
+const getFromDevice = (key: string) => window.localStorage.getItem(key);
+const deleteFromDevice = (key: string) => window.localStorage.removeItem(key);
 
-export default function Login(props) {
+export default function Login(props: any) {
   const [bb_userid, set_bb_userid] = useState(getFromDevice(SIDELINIEN_ID));
   const [bb_password, set_bb_password] = useState(
     getFromDevice(SIDELINIEN_PWD)
   );
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [securitytoken, setSecuritytoken] = useState("");
+  const [securitytokenExpire, setSecuritytokenExpire] = useState(-1);
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -26,14 +29,17 @@ export default function Login(props) {
   const [sticky, setSticky] = useState([]);
   const [message, setMessage] = useState("");
   const [showError, setShowError] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [isSending, setIsSending] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const doLogin = async () => {
     if (username && password) {
       setIsLoggingIn(true);
-      await grabCredentials();
-      await grabShouts();
+      try {
+        await grabCredentials();
+      } catch (e) {
+        console.log(e);
+      }
       setIsLoggingIn(false);
     }
   };
@@ -43,6 +49,8 @@ export default function Login(props) {
 
     if (window.confirm("Vil du gerne logge ud?")) {
       setLoggedIn(false);
+      setSecuritytoken("");
+      setSecuritytokenExpire(-1);
       setUsername("");
       setPassword("");
       set_bb_password("");
@@ -59,33 +67,92 @@ export default function Login(props) {
 
   const doSend = async () => {
     setIsSending(true);
-    console.log("send message", message);
+    const tokenExpired = securitytokenExpire + 1000 * 60 * 10 < Date.now();
 
-    // do stuff here
-    setShowError(
-      "Vi arbejder på også at kunne sende beskeder direkte til skakten."
-    );
-    await sleep(2000);
+    if (tokenExpired) {
+      if (username && password) {
+        console.log("get new token because we have what we need");
+        await grabSecurityToken();
+      } else {
+        setShowError(
+          "Øv, dit token er udløbet. Log ud og ind igen for at få et nyt"
+        );
+        return;
+      }
+    }
+
+    await sendMessage();
 
     setMessage("");
     setIsSending(false);
   };
 
-  const grabCredentials = async () => {
-    const res = await axios({
-      method: "post",
-      url: "http://localhost:4000/getcredentials",
-      data: {
-        username: username,
-        password: password
-      }
-    });
+  const sendMessage = async () => {
+    try {
+      const res = await axios({
+        method: "post",
+        url: `${config.apiGateway.URL}/sendshout`,
+        data: {
+          bb_userid,
+          bb_password,
+          securitytoken,
+          message
+        }
+      });
+      return res.data;
+    } catch (e) {
+      console.log(e);
+      return "";
+    }
+  };
 
-    const { bb_userid: id, bb_password: pwd } = res.data;
+  const grabSecurityToken = async () => {
+    try {
+      const res = await axios({
+        method: "post",
+        url: `${config.apiGateway.URL}/getsecuritytoken`,
+        data: {
+          username: username,
+          password: password
+        }
+      });
+      console.log(res.data);
+      return res.data;
+    } catch (e) {
+      console.log(e);
+      return "";
+    }
+  };
+
+  const grabCredentials = async () => {
+    let data: any = "";
+
+    if (securitytoken === "") {
+      data = await grabSecurityToken();
+    } else {
+      const res = await axios({
+        method: "post",
+        url: `${config.apiGateway.URL}/getcredentials`,
+        data: {
+          username: username,
+          password: password
+        }
+      });
+      data = res.data;
+    }
+
+    const { bb_userid: id, bb_password: pwd, securitytoken: token } = data;
 
     if (id && pwd) {
       set_bb_userid(id);
       set_bb_password(pwd);
+
+      if (token !== "") {
+        setSecuritytoken(token);
+        setIsSending(false);
+        setSecuritytokenExpire(Date.now());
+      }
+
       setLoggedIn(true);
       setShowError("");
 
@@ -97,30 +164,33 @@ export default function Login(props) {
   };
 
   const grabShouts = useCallback(async () => {
-    if (!loggedIn) {
+    if (!(loggedIn && bb_userid && bb_password)) {
       console.log("not logged in");
+      return;
+    }
+
+    console.log("grabshouts", loggedIn, bb_userid, bb_password);
+    try {
+      //@ts-ignore
       clearTimeout(grabShouts);
-      return;
-    }
+      const res = await axios({
+        url: `${config.apiGateway.URL}/getshouts`,
+        headers: {
+          Authorization: "Basic " + window.btoa(bb_userid + ":" + bb_password)
+        }
+      });
 
-    const res = await axios({
-      url: "http://localhost:4000/getshouts",
-      headers: {
-        Authorization: "Basic " + window.btoa(bb_userid + ":" + bb_password)
+      if (res.data.vbshout.error) {
+        console.log(res.data.vbshout.error);
+        return;
       }
-    });
 
-    if (res.data.vbshout.error) {
-      console.log(res.data.vbshout.error);
-      return;
+      setShouts(res.data.vbshout.shouts[0].shout);
+      setSticky(res.data.vbshout.sticky[0]);
+      setLastUpdate(Date.now());
+    } catch (e) {
+      console.log(e);
     }
-
-    if (!loggedIn) setLoggedIn(true);
-    setShouts(res.data.vbshout.shouts[0].shout);
-    setSticky(res.data.vbshout.sticky[0]);
-    setLastUpdate(Date.now());
-
-    setTimeout(grabShouts, 6000);
   }, [bb_userid, bb_password, loggedIn]);
 
   const grabAutologin = useCallback(async () => {
@@ -134,7 +204,6 @@ export default function Login(props) {
       setIsLoggingIn(true);
       try {
         setLoggedIn(true);
-        await grabShouts();
       } catch (e) {
         setLoggedIn(false);
         deleteFromDevice(SIDELINIEN_ID);
@@ -142,21 +211,30 @@ export default function Login(props) {
       }
       setIsLoggingIn(false);
     }
-  }, [grabShouts]);
+  }, []);
 
   useEffect(() => {
     grabAutologin();
   }, [grabAutologin]);
 
+  const shoutTimerRef = useRef();
+
   useEffect(() => {
-    grabShouts();
+    const id = setInterval(() => {
+      grabShouts();
+    }, 6000);
+    // @ts-ignore
+    shoutTimerRef.current = id;
+    return () => {
+      clearInterval(shoutTimerRef.current);
+    };
   }, [loggedIn, grabShouts]);
 
-  const createMarkup = str => {
+  const createMarkup = (str: any) => {
     return { __html: str };
   };
 
-  const toRGB = str => {
+  const toRGB = (str: string) => {
     var hash = 0;
     if (str.length === 0) return hash;
     for (let i = 0; i < str.length; i++) {
@@ -206,7 +284,7 @@ export default function Login(props) {
                     time: time && time.replace(/\[|\]/gi, ""),
                     name: curr.jsusername[0],
                     message: curr.message[0],
-                    color: toRGB(curr.jsusername[0]),
+                    color: toRGB(curr.jsusername[0]).toString(),
                     type: curr.template[0]
                   };
                 })
@@ -271,7 +349,7 @@ export default function Login(props) {
           <p>Vær med i "skakten" på din mobil - uden alt besværet</p>
           <form
             onSubmit={e => {
-              doLogin(e);
+              doLogin();
               e.preventDefault();
               return false;
             }}

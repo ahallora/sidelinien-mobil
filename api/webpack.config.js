@@ -1,5 +1,6 @@
 const slsw = require("serverless-webpack");
 const nodeExternals = require("webpack-node-externals");
+const package = require("./package.json");
 
 module.exports = {
   entry: slsw.lib.entries,
@@ -8,7 +9,11 @@ module.exports = {
   devtool: "source-map",
   // Since 'aws-sdk' is not compatible with webpack,
   // we exclude all node dependencies
-  externals: [nodeExternals()],
+  externals: [
+    nodeExternals({
+      allowlist: Object.keys(package.dependencies)
+    })
+  ],
   mode: slsw.lib.webpack.isLocal ? "development" : "production",
   optimization: {
     // We no not want to minimize our code.

@@ -1,0 +1,15 @@
+/api/.serverless
+/api/node_modules
+/client/node_modules
+/client/build
+
+env.yml
+**/package-lock.sjon
+**/yarn.lock
+**/.webpack
+**/.serverless
+
+client/package-lock.json
+api/package-lock.json
+api/yarn.lock
+client/yarn.lock

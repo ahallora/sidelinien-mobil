@@ -6,7 +6,7 @@ export const parseCredentialsFromHeader = (headers: {
   if (!authHeader || !authHeader.includes(" "))
     throw Error("No authorization header on request");
 
-  const [bb_userid, bb_password] = new Buffer(
+  const [bb_userid, bb_password] = Buffer.from(
     authHeader.split("Basic ")[1],
     "base64"
   )
