@@ -1,31 +1,36 @@
 service: sidelinien-api
 
 plugins:
-  - serverless-webpack
   - serverless-offline
+  - serverless-api-compression
+  - serverless-webpack
   - serverless-s3-sync
   - serverless-cloudfront-invalidate
 
 package:
   exclude:
     - mocks/**
+    - node_modules/aws-sdk/**
+    - node_modules/puppeteer/.local-chromium/**
 
 custom:
   stage: ${opt:stage, self:provider.stage}
   clientBucket: sidelinien-${self:custom.stage}-client
   #environment: ${file(./../env.yml):${self:custom.stage}, file(./../env.yml):default}
+  contentCompression: 1024
 
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules:
       packagePath: "./package.json"
+      forceExclude:
+        - aws-sdk
 
   cloudfrontInvalidate:
     distributionIdKey: DistributionId
     items:
       - "/*"
       - "/index.html"
-
   s3Sync:
     - bucketName: ${self:custom.clientBucket}
       localDir: ./../client/build
@@ -43,6 +48,11 @@ provider:
   region: eu-north-1
   profile: allora
   individually: true
+
+  layers:
+    # TODO: Compile yourself and use own binary!
+    # https://www.serverless.com/blog/publish-aws-lambda-layers-serverless-framework
+    - arn:aws:lambda:eu-north-1:764866452798:layer:chrome-aws-lambda:19
 
   environment:
     STAGE: ${self:custom.stage}
@@ -75,6 +85,8 @@ functions:
           cors: true
   getSecurityToken:
     handler: src/endpoints/getSecurityToken.main
+    memorySize: 1536
+    timeout: 30
     events:
       - http:
           path: /getsecuritytoken
@@ -89,22 +101,18 @@ resources:
       Type: "AWS::S3::Bucket"
       Properties:
         BucketName: ${self:custom.clientBucket}
+        AccessControl: PublicRead
         WebsiteConfiguration:
           ErrorDocument: "index.html"
           IndexDocument: "index.html"
-
-    # Configure Access to CloudFront
-    CloudFrontOriginAccessIdentity:
-      Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
-      Properties:
-        CloudFrontOriginAccessIdentityConfig:
-          Comment: !Ref clientBucket
 
     # Configure CloudFront
     CloudFrontDistribution:
       Type: "AWS::CloudFront::Distribution"
       Properties:
         DistributionConfig:
+          # Aliases:
+          #   - sidelinien.allora.dk
           CustomErrorResponses:
             - ErrorCode: 403 # not found
               ResponseCode: 404
@@ -126,7 +134,7 @@ resources:
               QueryString: false
             MaxTTL: 86400 # in seconds
             MinTTL: 60 # in seconds
-            TargetOriginId: s3origin
+            TargetOriginId: s3-website-origin
             ViewerProtocolPolicy: "allow-all"
           # This DefaultRootObject configuration is not enough.
           DefaultRootObject: "/index.html"
@@ -134,33 +142,12 @@ resources:
           HttpVersion: http2
           PriceClass: "PriceClass_All"
           Origins:
-            - DomainName: !GetAtt "clientBucket.DomainName"
-              Id: s3origin
-              S3OriginConfig:
-                OriginAccessIdentity:
-                  Fn::Join:
-                    - ""
-                    - - "origin-access-identity/cloudfront/"
-                      - !Ref CloudFrontOriginAccessIdentity
-
-    # Create an IAM user with Access Keys to enable automated deployment of the website to this bucket
-    PublishUser:
-      Type: "AWS::IAM::User"
-      Properties:
-        Policies:
-          - PolicyName: !Sub "publish-to-${self:custom.clientBucket}"
-            PolicyDocument:
-              Statement:
-                - Action: "s3:*"
-                  Effect: Allow
-                  Resource:
-                    - !Sub "arn:aws:s3:::${self:custom.clientBucket}"
-                    - !Sub "arn:aws:s3:::${self:custom.clientBucket}/*"
-
-    PublishCredentials:
-      Type: "AWS::IAM::AccessKey"
-      Properties:
-        UserName: !Ref PublishUser
+            - CustomOriginConfig:
+                HTTPPort: "80"
+                HTTPSPort: "443"
+                OriginProtocolPolicy: http-only
+              DomainName: "${self:custom.clientBucket}.s3-website.${self:provider.region}.amazonaws.com"
+              Id: s3-website-origin
 
   Outputs:
     Bucket:
@@ -169,12 +156,6 @@ resources:
     BucketUrl:
       Description: "S3 Bucket Url"
       Value: !GetAtt "clientBucket.WebsiteURL"
-    AccessKeyId:
-      Description: "S3 Access Key"
-      Value: !Ref PublishCredentials
-    AccessKeySecret:
-      Description: "S3 Secret Key"
-      Value: !GetAtt PublishCredentials.SecretAccessKey
     DistributionId:
       Description: "CloudFront Distribution ID"
       Value: !Ref CloudFrontDistribution

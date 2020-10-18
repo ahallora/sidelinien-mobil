@@ -8,6 +8,7 @@ env.yml
 **/yarn.lock
 **/.webpack
 **/.serverless
+**/.build
 
 client/package-lock.json
 api/package-lock.json

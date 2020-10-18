@@ -8,7 +8,7 @@ const dev = {
 const prod = {
   apiGateway: {
     REGION: "eu-north-1",
-    URL: "https://"
+    URL: " https://ybubgd3mj8.execute-api.eu-north-1.amazonaws.com/prod"
   }
 };
 

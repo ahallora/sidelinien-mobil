@@ -1,7 +1,5 @@
-import puppeteer from "puppeteer";
 import chromium from "chrome-aws-lambda";
-
-const sleep = async (ms: number) => await new Promise(r => setTimeout(r, ms));
+//import puppeteer from "puppeteer-core";
 
 const getCookieValue = (arr: any[], cookieName: string) =>
   arr.find(x => x.name === cookieName)
@@ -14,20 +12,13 @@ export default async function getSecurityToken(username: any, password: any) {
       "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
 
     let error;
-    let browser;
-    //const browser = await puppeteer.launch({ headless: true });
-
-    if (process.env.STAGE === "dev") {
-      browser = await puppeteer.launch({ headless: true });
-    } else {
-      browser = await chromium.puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath,
-        headless: chromium.headless,
-        ignoreHTTPSErrors: true
-      });
-    }
+    const browser = await chromium.puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true
+    });
 
     const page = await browser.newPage();
     await page.goto(loginPage, { waitUntil: "networkidle2" });

@@ -330,7 +330,7 @@ export default function Login(props: any) {
               className="inputField"
               disabled={isSending}
               placeholder="Din besked"
-              autoComplete="false"
+              autoComplete="off"
               onChange={e => setMessage(e.target.value)}
               value={message}
             />
@@ -358,7 +358,7 @@ export default function Login(props: any) {
               className="inputField"
               type="text"
               placeholder="Brugernavn"
-              autoComplete="username"
+              autoComplete="off"
               onChange={e => setUsername(e.target.value)}
               value={username}
               disabled={isLoggingIn}
@@ -366,7 +366,7 @@ export default function Login(props: any) {
             <input
               className="inputField"
               type="password"
-              autoComplete="current-password"
+              autoComplete="off"
               placeholder="Password"
               onChange={e => setPassword(e.target.value)}
               value={password}
