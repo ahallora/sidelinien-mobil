@@ -19,6 +19,7 @@
     "babel-plugin-source-map-support": "^2.1.3",
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.7.0",
+    "cross-env": "^7.0.2",
     "serverless": "^2.7.0",
     "serverless-api-compression": "^1.0.1",
     "serverless-cloudfront-invalidate": "^1.5.0",
@@ -31,11 +32,11 @@
     "webpack-node-externals": "^2.5.2"
   },
   "scripts": {
-    "start": "sls offline start",
-    "deploy_prod_sync": "cd ../client && npm run build && cd ../api && sls deploy -s prod",
-    "deploy_prod_nosync": "sls deploy -s prod --nos3sync",
-    "test_credentials": "SLS_DEBUG=* serverless invoke local --stage dev --function getCredentials",
-    "test_shouts": "SLS_DEBUG=* serverless invoke local --stage dev --function getShouts"
+    "start": "cross-env sls offline start",
+    "deploy_prod_sync": "cross-env cd ../client && npm run build && cd ../api && sls deploy -s prod",
+    "deploy_prod_nosync": "cross-env sls deploy -s prod --nos3sync",
+    "test_credentials": "cross-env SLS_DEBUG=* serverless invoke local --stage dev --function getCredentials",
+    "test_shouts": "cross-env SLS_DEBUG=* serverless invoke local --stage dev --function getShouts"
   },
   "author": "",
   "license": "ISC"
