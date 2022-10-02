@@ -14,7 +14,9 @@ interface Options {
   headless: boolean;
 }
 
-async function getOptions(isDev: boolean) {
+async function getOptions() {
+  const isDev = process.env.NODE_ENV !== "production";
+
   let options: Options;
   if (isDev) {
     options = {
@@ -34,12 +36,10 @@ async function getOptions(isDev: boolean) {
 
 let _page: core.Page | null;
 export default async function getPage() {
-  const isDev = process.env.NODE_ENV !== "production";
-
   if (_page) {
     return _page;
   }
-  const options = await getOptions(isDev);
+  const options = await getOptions();
   const browser = await core.launch(options);
   _page = await browser.newPage();
   return _page;

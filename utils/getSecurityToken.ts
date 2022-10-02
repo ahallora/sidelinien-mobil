@@ -13,8 +13,9 @@ export default async function getSecurityToken(username: any, password: any) {
     let error;
 
     const page = await getPage();
-    await page.goto(loginPage, { waitUntil: "networkidle2" });
-    //await page.setViewport({ width: 1200, height: 720 });
+    await page.goto(loginPage);
+    console.log(await page.content());
+    await page.waitForSelector("#vb_login_username");
 
     await page.type("#vb_login_username", username);
     await page.type("#vb_login_password", password);
