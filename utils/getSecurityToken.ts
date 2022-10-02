@@ -1,5 +1,4 @@
-import chromium from "chrome-aws-lambda";
-import puppeteer from "puppeteer-core";
+import getPage from "./chromium";
 
 const getCookieValue = (arr: any[], cookieName: string) =>
   arr.find((x) => x.name === cookieName)
@@ -13,18 +12,7 @@ export default async function getSecurityToken(username: any, password: any) {
 
     let error;
 
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath:
-        process.env.NODE_ENV === "production"
-          ? await chromium.executablePath
-          : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Set this to your local chrome
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
-    });
-
-    const page = await browser.newPage();
+    const page = await getPage();
     await page.goto(loginPage, { waitUntil: "networkidle2" });
     //await page.setViewport({ width: 1200, height: 720 });
 
@@ -67,7 +55,7 @@ export default async function getSecurityToken(username: any, password: any) {
       bb_password: getCookieValue(cookies, "bb_password"),
     };
 
-    await browser.close();
+    await page.close();
     return data;
   } catch (err) {
     console.error(err);
