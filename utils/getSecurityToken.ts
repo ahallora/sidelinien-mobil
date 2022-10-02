@@ -11,8 +11,12 @@ export default async function getSecurityToken(username: any, password: any) {
       "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
 
     let error;
-
     const page = await getPage();
+
+    const agent =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36";
+    page.setUserAgent(agent);
+
     await page.goto(loginPage);
     await page.waitForSelector("#vb_login_username");
     await page.focus("#vb_login_username");
