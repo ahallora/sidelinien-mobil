@@ -7,11 +7,11 @@ export default async function TestEndpoint(
 ) {
   try {
     const page = await getPage();
-    await page.goto("https://dummyjson.com/products/1", {
-      waitUntil: "networkidle2",
-    });
+    const loginPage =
+      "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
+    await page.goto(loginPage);
 
-    res.json({ yay: "🥳" });
+    res.send(await page.content());
   } catch (e) {
     console.log(e);
     res.json({ error: e?.message ?? e });

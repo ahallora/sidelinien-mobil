@@ -2,7 +2,7 @@
   "functions": {
     "pages/api/getsecuritytoken.ts": {
       "maxDuration": 10,
-      "memory": 512
+      "memory": 1024
     }
   }
 }
