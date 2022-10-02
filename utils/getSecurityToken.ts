@@ -19,8 +19,8 @@ export default async function getSecurityToken(username: any, password: any) {
     await page.goto(loginPage, { waitUntil: "networkidle2" });
     //await page.setViewport({ width: 1200, height: 720 });
 
-    await page.type("#vb_login_username", username);
-    await page.type("#vb_login_password", password);
+    await page.type("#vb_login_username", username, { delay: 250 });
+    await page.type("#vb_login_password", password, { delay: 250 });
     await page.click("#cb_cookieuser"); // check this to save id and password hash to cookies so we can get it
 
     await Promise.all([
@@ -29,7 +29,7 @@ export default async function getSecurityToken(username: any, password: any) {
     ]);
 
     await Promise.all([
-      page.click("form.vbform input[type='submit']", { delay: 1 }),
+      page.click("form.vbform input[type='submit']", { delay: 1000 }),
       page.waitForNavigation({ waitUntil: "networkidle0" }),
     ]);
 
