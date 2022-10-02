@@ -345,6 +345,7 @@ export default function Login() {
         <div className="loginContainer">
           <h1>Sidelinien Mobil</h1>
           <p>Vær med i "skakten" på din mobil - uden alt besværet</p>
+
           <form
             onSubmit={(e) => {
               doLogin();

@@ -1,5 +1,4 @@
-import randUserAgent from "rand-user-agent";
-import getPage from "./chromium";
+import chromium from "chrome-aws-lambda";
 
 const getCookieValue = (arr: any[], cookieName: string) =>
   arr.find((x) => x.name === cookieName)
@@ -9,17 +8,29 @@ const getCookieValue = (arr: any[], cookieName: string) =>
 export default async function getSecurityToken(username: any, password: any) {
   try {
     const loginPage =
-      "https://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
+      "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
 
     let error;
-    const page = await getPage();
-    const agent = randUserAgent("desktop", "chrome", "linux");
-    await page.setUserAgent(agent);
+    const browser = await chromium.puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+
+    const page = await browser.newPage();
     await page.goto(loginPage, { waitUntil: "networkidle2" });
+    //await page.setViewport({ width: 1200, height: 720 });
 
     await page.type("#vb_login_username", username);
     await page.type("#vb_login_password", password);
     await page.click("#cb_cookieuser"); // check this to save id and password hash to cookies so we can get it
+
+    await Promise.all([
+      page.click("form.vbform input[type='submit']"),
+      page.waitForNavigation({ waitUntil: "networkidle0" }),
+    ]);
 
     await Promise.all([
       page.click("form.vbform input[type='submit']", { delay: 1 }),
