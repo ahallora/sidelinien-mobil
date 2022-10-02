@@ -23,14 +23,14 @@ async function getOptions() {
     options = {
       args: [],
       executablePath: exePath,
-      headless: true,
+      headless: false,
       ignoreHTTPSErrors: true,
     };
   } else {
     options = {
       args: chrome.args,
       executablePath: await chrome.executablePath,
-      headless: chrome.headless,
+      headless: false,
       ignoreHTTPSErrors: true,
     };
   }
