@@ -24,11 +24,6 @@ export default async function getSecurityToken(username: any, password: any) {
     await page.click("#cb_cookieuser"); // check this to save id and password hash to cookies so we can get it
 
     await Promise.all([
-      page.click("form.vbform input[type='submit']"),
-      page.waitForNavigation({ waitUntil: "networkidle0" }),
-    ]);
-
-    await Promise.all([
       page.click("form.vbform input[type='submit']", { delay: 1000 }),
       page.waitForNavigation({ waitUntil: "networkidle0" }),
     ]);
