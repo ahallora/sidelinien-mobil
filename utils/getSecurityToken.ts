@@ -13,8 +13,10 @@ export default async function getSecurityToken(username: any, password: any) {
     let error;
 
     const page = await getPage();
-    await page.goto(loginPage);
-    await page.waitForSelector("#vb_login_username");
+    await Promise.all([
+      page.goto(loginPage),
+      page.waitForNavigation({ waitUntil: "networkidle0" }),
+    ]);
 
     await page.type("#vb_login_username", username);
     await page.type("#vb_login_password", password);
