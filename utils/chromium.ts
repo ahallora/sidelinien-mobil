@@ -12,6 +12,7 @@ interface Options {
   args: string[];
   executablePath: string;
   headless: boolean;
+  ignoreHTTPSErrors?: boolean;
 }
 
 async function getOptions() {
@@ -23,12 +24,14 @@ async function getOptions() {
       args: [],
       executablePath: exePath,
       headless: true,
+      ignoreHTTPSErrors: true,
     };
   } else {
     options = {
       args: chrome.args,
       executablePath: await chrome.executablePath,
       headless: chrome.headless,
+      ignoreHTTPSErrors: true,
     };
   }
   return options;
