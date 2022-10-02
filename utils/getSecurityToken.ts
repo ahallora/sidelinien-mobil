@@ -17,9 +17,7 @@ export default async function getSecurityToken(username: any, password: any) {
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36";
     page.setUserAgent(agent);
 
-    await page.goto(loginPage);
-    await page.waitForSelector("#vb_login_username");
-    await page.focus("#vb_login_username");
+    await page.goto(loginPage, { waitUntil: "domcontentloaded" });
 
     await page.type("#vb_login_username", username);
     await page.type("#vb_login_password", password);
