@@ -1,4 +1,6 @@
-import chromium from "chrome-aws-lambda";
+import error from "next/error";
+import randUserAgent from "rand-user-agent";
+import getPage from "./chromium";
 
 const getCookieValue = (arr: any[], cookieName: string) =>
   arr.find((x) => x.name === cookieName)
@@ -7,19 +9,13 @@ const getCookieValue = (arr: any[], cookieName: string) =>
 
 export default async function getSecurityToken(username: any, password: any) {
   try {
-    const loginPage =
-      "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
-
     let error;
-    const browser = await chromium.puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
-    });
+    const loginPage =
+      "https://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
 
-    const page = await browser.newPage();
+    const page = await getPage();
+    const agent = randUserAgent("desktop", "chrome", "linux");
+    await page.setUserAgent(agent);
     await page.goto(loginPage, { waitUntil: "networkidle2" });
     //await page.setViewport({ width: 1200, height: 720 });
 
