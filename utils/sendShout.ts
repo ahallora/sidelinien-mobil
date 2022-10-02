@@ -16,7 +16,7 @@ export default async function sendShout(
 
       const config: AxiosRequestConfig = {
         method: "POST",
-        url: "http://sidelinien.dk/forums/vbshout.php",
+        url: "https://sidelinien.dk/forums/vbshout.php",
         headers: {
           "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
           cookie: `bb_userid=${bb_userid}; bb_password=${bb_password};`,

@@ -3,7 +3,7 @@ module.exports = {
     return [
       {
         source: "/showthread.php",
-        destination: "http://sidelinien.dk/forums/showthread.php",
+        destination: "https://sidelinien.dk/forums/showthread.php",
         permanent: true,
       },
     ];

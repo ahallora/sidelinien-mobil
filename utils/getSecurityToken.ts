@@ -1,3 +1,4 @@
+import randUserAgent from "rand-user-agent";
 import getPage from "./chromium";
 
 const getCookieValue = (arr: any[], cookieName: string) =>
@@ -8,10 +9,12 @@ const getCookieValue = (arr: any[], cookieName: string) =>
 export default async function getSecurityToken(username: any, password: any) {
   try {
     const loginPage =
-      "http://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
+      "https://sidelinien.dk/forums/search.php?do=getnew&contenttype=vBForum_Event"; // hack to get to the vbform login
 
     let error;
     const page = await getPage();
+    const agent = randUserAgent("desktop", "chrome", "linux");
+    await page.setUserAgent(agent);
     await page.goto(loginPage, { waitUntil: "networkidle2" });
 
     await page.type("#vb_login_username", username);
@@ -19,7 +22,7 @@ export default async function getSecurityToken(username: any, password: any) {
     await page.click("#cb_cookieuser"); // check this to save id and password hash to cookies so we can get it
 
     await Promise.all([
-      page.click("form.vbform input[type='submit']"),
+      page.click("form.vbform input[type='submit']", { delay: 1 }),
       page.waitForNavigation({ waitUntil: "networkidle0" }),
     ]);
 

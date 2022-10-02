@@ -27,7 +27,7 @@ export default async function getCredentials(username: any, password: any) {
   try {
     const config: AxiosRequestConfig = {
       method: "POST",
-      url: "http://sidelinien.dk/forums/login.php?do=login",
+      url: "https://sidelinien.dk/forums/login.php?do=login",
       data: querystring.stringify({
         vb_login_username: username,
         vb_login_password: "",
