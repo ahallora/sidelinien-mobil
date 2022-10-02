@@ -14,6 +14,8 @@ export default async function getSecurityToken(username: any, password: any) {
 
     const page = await getPage();
     await page.goto(loginPage);
+    await page.waitForSelector("#vb_login_username");
+    await page.focus("#vb_login_username");
 
     await page.type("#vb_login_username", username);
     await page.type("#vb_login_password", password);
