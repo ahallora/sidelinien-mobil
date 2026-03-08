@@ -1,11 +1,18 @@
-// import App from 'next/app'
-
 import "../Styles/ErrorBox.css";
-import "../Styles/Loader.css";
-import "../Styles/Shouts.css";
+import "@/Styles/globals.css";
+import "@/Styles/Shouts.css";
+import type { AppProps } from "next/app";
+import { ThemeProvider } from "@/Components/ThemeProvider";
 
-function SidelinienApp({ Component, pageProps }) {
-  return <Component {...pageProps} />;
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <Component {...pageProps} />
+    </ThemeProvider>
+  );
 }
-
-export default SidelinienApp;

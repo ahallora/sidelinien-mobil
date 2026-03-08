@@ -81,15 +81,10 @@ body {
 }
 
 .footer {
-  position: fixed;
-  z-index: 2;
-  bottom: 0;
-  left: 0;
-  right: 0;
   width: 100%;
   height: 50px;
-  background: #fff;
-  border-top: 1px solid #ddd;
+  background: var(--background);
+  border-top: 1px solid var(--border);
   padding: 8px;
   display: flex;
   align-items: center;
@@ -100,8 +95,9 @@ input.inputField,
 input.inputField:focus {
   width: 100%;
   height: 40px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--border);
   border-radius: 4px;
   border-right: 0;
   padding-left: 8px;
@@ -111,7 +107,7 @@ input.inputField:focus {
 }
 
 input.inputField:focus {
-  border-color: #0089ff;
+  border-color: var(--primary);
 }
 
 .footer input.inputField {
@@ -123,8 +119,8 @@ input.inputField:focus {
 
 button.primary {
   width: 100%;
-  background: #0089ff;
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   border: 0;
   border-radius: 4px;
   padding: 8px;
@@ -136,7 +132,7 @@ button.primary {
 }
 
 button.primary:focus {
-  border: 1px solid #0089ff;
+  border: 1px solid var(--primary);
 }
 
 .footer button.primary {
@@ -147,25 +143,16 @@ button.primary:focus {
 }
 
 button.primary:disabled {
-  background: #ddd;
-  color: #888;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  opacity: 0.5;
 }
 
 input.inputField:disabled {
-  background: #eee;
-  color: #888;
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 
-.shoutContainer {
-  display: block;
-  width: 100%;
-  height: calc(100% - 100px);
-  margin: 0 auto;
-  overflow: auto;
-  overflow-x: hidden;
-  padding: 0px 8px;
-  padding-bottom: 58px;
-}
 
 .shout {
   display: flex;
@@ -212,20 +199,25 @@ input.inputField:disabled {
 
 .message {
   text-align: left;
-  font-size: 0.95rem;
-  color: #000;
-  background: #e0e0e0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  background: oklch(0.96 0.04 var(--shout-hue));
   padding: 8px 16px;
   border-radius: 8px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
-  border-left: 4px solid #afafaf;
+  border-left: 4px solid oklch(0.6 0.2 var(--shout-hue));
   width: 90%;
 }
 
+.dark .message {
+  background: oklch(0.22 0.04 var(--shout-hue));
+  border-left-color: oklch(0.7 0.15 var(--shout-hue));
+}
+
 .message.self {
-  color: #fff;
-  background: #0089ff;
+  color: var(--primary-foreground);
+  background: var(--primary);
   border: 0;
   border-radius: 8px;
   margin-left: 10%;
@@ -257,28 +249,41 @@ input.inputField:disabled {
 .message a:hover,
 .message a:focus,
 .message a:visited {
-  color: #0089ff;
+  color: oklch(0.5 0.2 var(--shout-hue));
   word-break: break-all;
+}
+
+.dark .message a,
+.dark .message a:hover,
+.dark .message a:focus,
+.dark .message a:visited {
+  color: oklch(0.75 0.15 var(--shout-hue));
 }
 
 .message.self a,
 .message.self a:hover,
 .message.self a:focus,
 .message.self a:visited {
-  color: #fff;
+  color: var(--primary-foreground);
+  text-decoration: underline;
 }
 
 .message.self .author {
-  opacity: 1;
+  color: var(--primary-foreground);
+  opacity: 0.8;
 }
 
 .author {
-  font-size: left;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   display: flex;
   align-items: center;
   margin-top: 4px;
-  opacity: 0.5;
+  font-weight: 500;
+  color: oklch(0.5 0.2 var(--shout-hue));
+}
+
+.dark .author {
+  color: oklch(0.8 0.15 var(--shout-hue));
 }
 
 .dot {

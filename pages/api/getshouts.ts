@@ -1,36 +1,39 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { getIronSession } from "iron-session";
 
-import { success, failure } from "../../utils/responses";
-import { parseCredentialsFromHeader } from "../../utils/parseCredentialsFromHeader";
+import { success, failure, methodNotAllowed } from "../../utils/responses";
 import getShouts from "../../utils/getShouts";
 import xmlConvert from "../../utils/xmlConvert";
+import { sessionOptions, SessionData } from "../../lib/session";
 
 export default async function getShoutsEndpoint(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
+  if (req.method !== "GET") {
+    methodNotAllowed(res);
+    return;
+  }
+
   try {
-    const { bb_userid, bb_password } = parseCredentialsFromHeader(req.headers);
-    if (!bb_userid || !bb_password) throw Error("Invalid credentials");
+    const session = await getIronSession<SessionData>(req, res, sessionOptions);
 
-    const output = await getShouts(bb_userid, bb_password);
-    // const etag = md5(output);
+    if (!session.bb_userid || !session.bb_password) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
 
-    // if (etag === req.headers["if-none-match"]) {
-    //   return clres.status(304).end();
-    // } else {
-    //   res.set({
-    //     "cache-control": "max-age=5",
-    //     ETag: etag
-    //   });
-    // }
+    const output = await getShouts(session.bb_userid, session.bb_password);
 
     const jsonxml = await xmlConvert(output);
-    if (!jsonxml) throw Error("Malformed data received");
+    if (!jsonxml) {
+      failure(res, "Malformed data received");
+      return;
+    }
 
-    return success(res, jsonxml);
-  } catch (err) {
-    console.log(err);
-    return failure(res, err.message || err);
+    success(res, jsonxml);
+  } catch (err: any) {
+    console.error("getshouts error:", err?.message || err);
+    failure(res, "Failed to fetch shouts");
   }
 }

@@ -1,27 +1,44 @@
-import axios, { AxiosRequestConfig } from "axios";
+import httpClient from "./httpClient";
 
+/**
+ * Fetch shouts from the vBShout shoutbox.
+ * Uses the authenticated user's cookies to access the endpoint.
+ */
 export default async function getShouts(
   bb_userid: string,
-  bb_password: string
+  bb_password: string,
 ): Promise<string> {
-  const ts = Date.now();
-  const url = `https://sidelinien.dk/forums/vbshout.php?type=shouts&do=ajax&action=fetch&instanceid=1&tabid=shouts&shoutorder=DESC&pmtime=0&v=${ts}`;
-  const headers = {
-    accept: "*/*",
-    "accept-language": "da,en-US;q=0.9,en;q=0.8",
-    "x-requested-with": "XMLHttpRequest",
-    cookie: `bb_userid=${bb_userid}; bb_password=${bb_password}`,
-  };
+  if (!bb_userid || !bb_password) {
+    throw new Error("Credentials are required to fetch shouts");
+  }
 
-  const res = await axios(<AxiosRequestConfig>{
-    method: "GET",
-    url,
-    headers,
+  const ts = Date.now();
+
+  const res = await httpClient.get("/vbshout.php", {
+    params: {
+      type: "shouts",
+      do: "ajax",
+      action: "fetch",
+      instanceid: "1",
+      tabid: "shouts",
+      shoutorder: "DESC",
+      pmtime: "0",
+      v: ts.toString(),
+    },
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      Accept: "*/*",
+      Cookie: `bb_userid=${bb_userid}; bb_password=${bb_password}`,
+      Referer: "http://sidelinien.dk/forums/",
+    },
     responseType: "arraybuffer",
-    //@ts-ignore
-    responseEncoding: "binary",
   });
-  if (!res.data) throw Error("Data kunne ikke hentes");
-  let html = res.data.toString("latin1");
+
+  if (!res.data) {
+    throw new Error("Data kunne ikke hentes");
+  }
+
+  // vBulletin uses latin1/ISO-8859-1 encoding for shout responses
+  const html = Buffer.from(res.data).toString("latin1");
   return html;
 }

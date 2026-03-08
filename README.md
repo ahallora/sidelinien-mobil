@@ -1,4 +1,4 @@
-# Sidelinien Mobil
+# Nice FC
 
 **Endelig en mobilløsning til FCK's debatforum www.Sidelinien.dk**
 

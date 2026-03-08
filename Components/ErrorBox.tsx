@@ -1,17 +1,28 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useRef } from "react";
 
-export default function ErrorBox(props: any) {
-  const { errorText, cb } = props;
-  let timerFnc: any = useCallback(() => cb(""), [cb]);
+interface ErrorBoxProps {
+  errorText: string;
+  cb: (value: string) => void;
+}
+
+export default function ErrorBox({ errorText, cb }: ErrorBoxProps) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    clearTimeout(timerFnc);
-    setTimeout(timerFnc, 5000);
-  }, [errorText, timerFnc]);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    if (errorText) {
+      timerRef.current = setTimeout(() => cb(""), 5000);
+    }
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [errorText, cb]);
 
-  return errorText === "" ? (
-    <div></div>
-  ) : (
-    <div className="errorBox">{errorText}</div>
-  );
+  if (!errorText) return null;
+
+  return <div className="errorBox">{errorText}</div>;
 }
