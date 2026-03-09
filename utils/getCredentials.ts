@@ -41,7 +41,7 @@ export default async function getCredentials(
     cookieuser: "1",
     securitytoken: "guest",
     vb_login_md5password: md5(password),
-    vb_login_md5password_utf: md5(password),
+    vb_login_md5password_utf: md5(username),
   });
 
   const res = await httpClient.post(
