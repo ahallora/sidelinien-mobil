@@ -58,7 +58,15 @@ export default async function getCredentialsEndpoint(
       hasSecurityToken: !!result.securitytoken,
     });
   } catch (err: any) {
-    console.error("getcredentials error:", err?.message || err);
+    if (err.response) {
+      console.error(
+        "getcredentials error response:",
+        err.response.status,
+        err.response.data,
+      );
+    } else {
+      console.error("getcredentials error:", err?.message || err);
+    }
     failure(res, "Login failed");
   }
 }

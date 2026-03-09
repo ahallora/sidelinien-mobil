@@ -58,7 +58,15 @@ export default async function getSecurityTokenEndpoint(
       hasSecurityToken: !!result.securitytoken,
     });
   } catch (err: any) {
-    console.error("getsecuritytoken error:", err?.message || err);
+    if (err.response) {
+      console.error(
+        "getsecuritytoken error response:",
+        err.response.status,
+        err.response.data,
+      );
+    } else {
+      console.error("getsecuritytoken error:", err?.message || err);
+    }
     failure(res, "Failed to get security token");
   }
 }
