@@ -30,6 +30,9 @@ export default async function getShouts(
       Accept: "*/*",
       Cookie: `bb_userid=${bb_userid}; bb_password=${bb_password}`,
       Referer: "http://sidelinien.dk/forums/",
+      // Request uncompressed response. The shared httpClient advertises
+      // br + zstd which Node.js can't auto-decompress for arraybuffer.
+      "Accept-Encoding": "identity",
     },
     responseType: "arraybuffer",
   });
