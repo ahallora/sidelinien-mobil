@@ -13,7 +13,11 @@ export default async function logoutRoute(
   }
 
   const session = await getIronSession<SessionData>(req, res, sessionOptions);
-  session.destroy();
+  session.securitytoken = undefined;
+  session.bb_sessionhash = undefined;
+  session.bb_userid = undefined;
+  session.bb_password = undefined;
+  await session.save();
 
   success(res, { success: true });
 }

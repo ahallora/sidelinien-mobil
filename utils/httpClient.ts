@@ -3,17 +3,25 @@ import axios, { AxiosInstance } from "axios";
 /**
  * Shared axios instance with browser-like defaults for sidelinien.dk.
  *
- * NOTE: We use HTTP (not HTTPS) because sidelinien.dk is behind Cloudflare
- * which performs JA3 TLS fingerprinting and blocks non-browser TLS handshakes.
- * HTTP connections bypass this restriction since Cloudflare allows them through.
+ * When PROXY_URL and PROXY_SECRET are set (Vercel production), requests
+ * are routed through a Cloudflare Worker proxy to bypass Cloudflare's
+ * bot detection on datacenter IPs.
  *
- * Security consideration: These are server-side requests from our backend
- * to Cloudflare's edge. The end-user ↔ our server connection uses HTTPS
- * (handled by Vercel/hosting platform). The credentials transmitted are
- * vBulletin session hashes, not plaintext passwords.
+ * Locally, requests go directly to sidelinien.dk over HTTP (which
+ * bypasses Cloudflare's JA3 TLS fingerprinting).
  */
 
-const BROWSER_HEADERS = {
+const PROXY_URL = process.env.PROXY_URL; // e.g. https://sidelinien-proxy.<you>.workers.dev
+const PROXY_SECRET = process.env.PROXY_SECRET;
+const useProxy = !!(PROXY_URL && PROXY_SECRET);
+
+// When using the proxy, the baseURL points to the Worker.
+// The Worker then forwards requests to sidelinien.dk/forums/...
+const baseURL = useProxy
+  ? `${PROXY_URL}/forums`
+  : "http://sidelinien.dk/forums";
+
+const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   Accept:
@@ -33,8 +41,13 @@ const BROWSER_HEADERS = {
   "Sec-Ch-Ua-Platform": '"Windows"',
 };
 
+// Add proxy auth header when using the Cloudflare Worker
+if (useProxy) {
+  BROWSER_HEADERS["x-proxy-secret"] = PROXY_SECRET!;
+}
+
 const httpClient: AxiosInstance = axios.create({
-  baseURL: "http://sidelinien.dk/forums",
+  baseURL,
   headers: BROWSER_HEADERS,
   timeout: 15_000,
   maxRedirects: 5,

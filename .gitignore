@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/cf-proxy/node_modules
 /.pnp
 .pnp.js
 
