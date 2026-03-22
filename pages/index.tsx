@@ -2,8 +2,6 @@ import Head from "next/head";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/Components/ui/tabs";
 import Login from "../Components/Login";
 import BlueskyFeed from "../Components/BlueskyFeed";
-import LiveScoreFeed from "../Components/LiveScoreFeed";
-import PlaceholderLogo from "@/Components/PlaceholderLogo";
 import { Sidebar } from "@/Components/Sidebar";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useEffect, useState } from "react";
@@ -103,7 +101,7 @@ export default function Index() {
                   <BlueskyFeed
                     title="Bluesky Feed"
                     subtitle="#fcklive"
-                    endpoint="/api/bluesky?feed=at://did:plc:diie6pvimafluwsgkplwzced/app.bsky.feed.generator/aaadki52qupku"
+                    endpoint="/api/bluesky?q=%23fcklive"
                     hideHeader={true}
                   />
                 </div>
@@ -135,7 +133,7 @@ export default function Index() {
                   <BlueskyFeed
                     title="Bluesky Feed"
                     subtitle="#fcklive"
-                    endpoint="/api/bluesky?feed=at://did:plc:diie6pvimafluwsgkplwzced/app.bsky.feed.generator/aaadki52qupku"
+                    endpoint="/api/bluesky?q=%23fcklive"
                   />
                 </div>
                 <div className="border border-r-0 rounded-md overflow-hidden bg-card flex flex-col h-full col-span-1">

@@ -3,23 +3,20 @@ import axios, { AxiosInstance } from "axios";
 /**
  * Shared axios instance with browser-like defaults for sidelinien.dk.
  *
- * When PROXY_URL and PROXY_SECRET are set (Vercel production), requests
- * are routed through a Cloudflare Worker proxy to bypass Cloudflare's
- * bot detection on datacenter IPs.
- *
- * Locally, requests go directly to sidelinien.dk over HTTP (which
- * bypasses Cloudflare's JA3 TLS fingerprinting).
+ * Requests are routed through a Cloudflare Worker proxy to bypass Cloudflare's
+ * bot detection on datacenter IPs. This proxy is now strictly required in all environments.
  */
 
 const PROXY_URL = process.env.PROXY_URL; // e.g. https://sidelinien-proxy.<you>.workers.dev
 const PROXY_SECRET = process.env.PROXY_SECRET;
-const useProxy = !!(PROXY_URL && PROXY_SECRET);
 
-// When using the proxy, the baseURL points to the Worker.
-// The Worker then forwards requests to sidelinien.dk/forums/...
-const baseURL = useProxy
-  ? `${PROXY_URL}/forums`
-  : "http://sidelinien.dk/forums";
+if (!PROXY_URL || !PROXY_SECRET) {
+  console.warn("WARNING: PROXY_URL or PROXY_SECRET is not set! We must only use the Cloudflare proxy to connect to sidelinien. Requests may fail.");
+}
+
+// The app strictly enforces connecting through the Cloudflare proxy Worker.
+// The Worker forwards requests to sidelinien.dk/forums/...
+const baseURL = `${PROXY_URL}/forums`;
 
 const BROWSER_HEADERS: Record<string, string> = {
   "User-Agent":
@@ -41,9 +38,9 @@ const BROWSER_HEADERS: Record<string, string> = {
   "Sec-Ch-Ua-Platform": '"Windows"',
 };
 
-// Add proxy auth header when using the Cloudflare Worker
-if (useProxy) {
-  BROWSER_HEADERS["x-proxy-secret"] = PROXY_SECRET!;
+// Add proxy auth header for the Cloudflare Worker
+if (PROXY_SECRET) {
+  BROWSER_HEADERS["x-proxy-secret"] = PROXY_SECRET;
 }
 
 const httpClient: AxiosInstance = axios.create({

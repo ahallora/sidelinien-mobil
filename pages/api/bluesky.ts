@@ -5,10 +5,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  const { feed, actor, limit = 50 } = req.query;
+  const { feed, actor, q, limit = 50 } = req.query;
 
-  if (!feed && !actor) {
-    return res.status(400).json({ error: "Missing feed or actor parameter" });
+  if (!feed && !actor && !q) {
+    return res.status(400).json({ error: "Missing feed, actor, or q parameter" });
   }
 
   // Sanitize the limit parameter (min 1, max 100)
@@ -41,6 +41,12 @@ export default async function handler(
           limit: parsedLimit,
         });
         posts = response.data.feed.map((item) => item.post);
+      } else if (q) {
+        const response = await agent.app.bsky.feed.searchPosts({
+          q: q as string,
+          limit: parsedLimit,
+        });
+        posts = response.data.posts;
       }
 
       return res.status(200).json({ posts });
