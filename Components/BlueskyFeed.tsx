@@ -10,6 +10,27 @@ import {
 import { ScrollArea } from "@/Components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 
+interface BskyImage {
+  thumb: string;
+  fullsize: string;
+  alt: string;
+}
+
+interface BskyEmbed {
+  $type: string;
+  images?: BskyImage[];
+  media?: {
+    $type: string;
+    images?: BskyImage[];
+  };
+  external?: {
+    uri: string;
+    title: string;
+    description: string;
+    thumb?: string;
+  };
+}
+
 interface BskyPost {
   cid: string;
   uri: string;
@@ -22,6 +43,7 @@ interface BskyPost {
     text: string;
     createdAt: string;
   };
+  embed?: BskyEmbed;
 }
 
 interface BlueskyFeedProps {
@@ -142,6 +164,62 @@ export default function BlueskyFeed({
               </CardHeader>
               <CardContent className="p-4 pt-0 text-sm whitespace-pre-wrap">
                 {post.record.text}
+                {post.embed?.images && post.embed.images.length > 0 && (
+                  <div
+                    className={`mt-2 grid gap-1 ${post.embed.images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+                  >
+                    {post.embed.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img.fullsize}
+                        alt={img.alt || ""}
+                        className="rounded-md w-full object-cover max-h-72"
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                )}
+                {post.embed?.media?.images &&
+                  post.embed.media.images.length > 0 && (
+                    <div
+                      className={`mt-2 grid gap-1 ${post.embed.media.images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+                    >
+                      {post.embed.media.images.map((img, i) => (
+                        <img
+                          key={i}
+                          src={img.fullsize}
+                          alt={img.alt || ""}
+                          className="rounded-md w-full object-cover max-h-72"
+                          loading="lazy"
+                        />
+                      ))}
+                    </div>
+                  )}
+                {post.embed?.external && (
+                  <a
+                    href={post.embed.external.uri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 block border rounded-md overflow-hidden hover:bg-muted/50 transition-colors"
+                  >
+                    {post.embed.external.thumb && (
+                      <img
+                        src={post.embed.external.thumb}
+                        alt=""
+                        className="w-full h-32 object-cover"
+                        loading="lazy"
+                      />
+                    )}
+                    <div className="p-2">
+                      <p className="font-medium text-xs truncate">
+                        {post.embed.external.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {post.embed.external.description}
+                      </p>
+                    </div>
+                  </a>
+                )}
               </CardContent>
             </Card>
           ))}
