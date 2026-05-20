@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { formatRelativeDanish } from "../lib/dateUtils";
 import {
   Card,
@@ -31,6 +31,16 @@ interface BskyEmbed {
   };
 }
 
+interface BskyFacetFeature {
+  $type: string;
+  uri?: string;
+}
+
+interface BskyFacet {
+  index: { byteStart: number; byteEnd: number };
+  features: BskyFacetFeature[];
+}
+
 interface BskyPost {
   cid: string;
   uri: string;
@@ -42,6 +52,7 @@ interface BskyPost {
   record: {
     text: string;
     createdAt: string;
+    facets?: BskyFacet[];
   };
   embed?: BskyEmbed;
 }
@@ -51,6 +62,79 @@ interface BlueskyFeedProps {
   subtitle: string;
   endpoint: string;
   hideHeader?: boolean;
+}
+
+function renderRichText(text: string, facets?: BskyFacet[]) {
+  if (!facets || facets.length === 0) {
+    // Fallback: linkify URLs with regex
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    if (parts.length === 1) return text;
+    return parts.map((part, i) =>
+      urlRegex.test(part) ? (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline break-all"
+        >
+          {part}
+        </a>
+      ) : (
+        <span key={i}>{part}</span>
+      ),
+    );
+  }
+
+  // Use facets for precise link rendering
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const bytes = encoder.encode(text);
+
+  const sortedFacets = [...facets].sort(
+    (a, b) => a.index.byteStart - b.index.byteStart,
+  );
+
+  const segments: React.ReactNode[] = [];
+  let lastEnd = 0;
+
+  for (const facet of sortedFacets) {
+    const { byteStart, byteEnd } = facet.index;
+    const linkFeature = facet.features.find(
+      (f) => f.$type === "app.bsky.richtext.facet#link",
+    );
+
+    if (byteStart > lastEnd) {
+      segments.push(decoder.decode(bytes.slice(lastEnd, byteStart)));
+    }
+
+    const segmentText = decoder.decode(bytes.slice(byteStart, byteEnd));
+
+    if (linkFeature?.uri) {
+      segments.push(
+        <a
+          key={byteStart}
+          href={linkFeature.uri}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline break-all"
+        >
+          {segmentText}
+        </a>,
+      );
+    } else {
+      segments.push(segmentText);
+    }
+
+    lastEnd = byteEnd;
+  }
+
+  if (lastEnd < bytes.length) {
+    segments.push(decoder.decode(bytes.slice(lastEnd)));
+  }
+
+  return segments;
 }
 
 export default function BlueskyFeed({
@@ -163,7 +247,7 @@ export default function BlueskyFeed({
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0 text-sm whitespace-pre-wrap">
-                {post.record.text}
+                {renderRichText(post.record.text, post.record.facets)}
                 {post.embed?.images && post.embed.images.length > 0 && (
                   <div
                     className={`mt-2 grid gap-1 ${post.embed.images.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
