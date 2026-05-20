@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { formatRelativeDanish } from "../lib/dateUtils";
 import {
   Card,
@@ -8,7 +8,7 @@ import {
   CardDescription,
 } from "@/Components/ui/card";
 import { ScrollArea } from "@/Components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 interface BskyImage {
   thumb: string;
@@ -147,6 +147,31 @@ export default function BlueskyFeed({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshCountdown, setRefreshCountdown] = useState(30);
+  const [lightboxGallery, setLightboxGallery] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const touchStartX = useRef<number | null>(null);
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxGallery(images);
+    setLightboxIndex(index);
+  };
+
+  const closeLightbox = () => {
+    setLightboxGallery([]);
+    setLightboxIndex(0);
+  };
+
+  useEffect(() => {
+    if (lightboxGallery.length === 0) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      if (e.key === "ArrowRight")
+        setLightboxIndex((i) => Math.min(i + 1, lightboxGallery.length - 1));
+      if (e.key === "ArrowLeft") setLightboxIndex((i) => Math.max(i - 1, 0));
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [lightboxGallery]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -257,8 +282,14 @@ export default function BlueskyFeed({
                         key={i}
                         src={img.fullsize}
                         alt={img.alt || ""}
-                        className="rounded-md w-full object-cover max-h-72"
+                        className="rounded-md w-full object-cover max-h-72 cursor-pointer hover:opacity-90 transition-opacity"
                         loading="lazy"
+                        onClick={() =>
+                          openLightbox(
+                            post.embed!.images!.map((x) => x.fullsize),
+                            i,
+                          )
+                        }
                       />
                     ))}
                   </div>
@@ -273,8 +304,14 @@ export default function BlueskyFeed({
                           key={i}
                           src={img.fullsize}
                           alt={img.alt || ""}
-                          className="rounded-md w-full object-cover max-h-72"
+                          className="rounded-md w-full object-cover max-h-72 cursor-pointer hover:opacity-90 transition-opacity"
                           loading="lazy"
+                          onClick={() =>
+                            openLightbox(
+                              post.embed!.media!.images!.map((x) => x.fullsize),
+                              i,
+                            )
+                          }
                         />
                       ))}
                     </div>
@@ -309,6 +346,76 @@ export default function BlueskyFeed({
           ))}
         </div>
       </ScrollArea>
+
+      {lightboxGallery.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={closeLightbox}
+          onTouchStart={(e) => {
+            touchStartX.current = e.touches[0].clientX;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current === null) return;
+            const diff = e.changedTouches[0].clientX - touchStartX.current;
+            if (diff > 50) setLightboxIndex((i) => Math.max(i - 1, 0));
+            else if (diff < -50)
+              setLightboxIndex((i) =>
+                Math.min(i + 1, lightboxGallery.length - 1),
+              );
+            touchStartX.current = null;
+          }}
+        >
+          <button
+            className="absolute top-4 right-4 text-white/80 hover:text-white z-10"
+            onClick={closeLightbox}
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {lightboxGallery.length > 1 && lightboxIndex > 0 && (
+            <button
+              className="absolute left-4 text-white/80 hover:text-white z-10 p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => i - 1);
+              }}
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+          )}
+
+          <img
+            src={lightboxGallery[lightboxIndex]}
+            alt=""
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {lightboxGallery.length > 1 &&
+            lightboxIndex < lightboxGallery.length - 1 && (
+              <button
+                className="absolute right-4 text-white/80 hover:text-white z-10 p-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((i) => i + 1);
+                }}
+              >
+                <ChevronRight className="h-8 w-8" />
+              </button>
+            )}
+
+          {lightboxGallery.length > 1 && (
+            <div className="absolute bottom-6 flex gap-1.5">
+              {lightboxGallery.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-2 w-2 rounded-full ${i === lightboxIndex ? "bg-white" : "bg-white/40"}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
